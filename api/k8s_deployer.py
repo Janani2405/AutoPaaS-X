@@ -3,6 +3,10 @@ import subprocess
 import os
 
 def generate_deployment_yaml(app_name, cpu_units, ram_mb, image="nginx"):
+    # 🔒 Clamp and format CPU/RAM
+    safe_cpu = str(round(max(0.1, min(cpu_units, 4.0)), 1))     # CPU: 0.1 to 4.0 cores
+    safe_ram = f"{max(32, int(ram_mb))}Mi"                      # RAM: ≥ 32Mi
+
     deployment = {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
@@ -28,12 +32,12 @@ def generate_deployment_yaml(app_name, cpu_units, ram_mb, image="nginx"):
                         "image": image,
                         "resources": {
                             "requests": {
-                                "cpu": f"{cpu_units}",
-                                "memory": f"{ram_mb}Mi"
+                                "cpu": safe_cpu,
+                                "memory": safe_ram
                             },
                             "limits": {
-                                "cpu": f"{cpu_units}",
-                                "memory": f"{ram_mb}Mi"
+                                "cpu": safe_cpu,
+                                "memory": safe_ram
                             }
                         }
                     }]
@@ -42,6 +46,7 @@ def generate_deployment_yaml(app_name, cpu_units, ram_mb, image="nginx"):
         }
     }
 
+    # 📝 Save to YAML
     os.makedirs("manifests", exist_ok=True)
     path = f"manifests/{app_name}_deployment.yaml"
     with open(path, "w") as f:
@@ -49,6 +54,7 @@ def generate_deployment_yaml(app_name, cpu_units, ram_mb, image="nginx"):
 
     print(f"✅ Deployment YAML generated: {path}")
     return path
+
 
 def apply_yaml(path):
     try:
